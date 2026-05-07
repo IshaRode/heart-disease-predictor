@@ -4,8 +4,11 @@ app.py — FastAPI backend for Heart Disease Risk Predictor
 Endpoints:
   GET  /health   — health check
   POST /predict  — predict heart disease risk from patient features
+  POST /chat     — conversational AI assistant explaining predictions
 
 Loads model.pkl, scaler.pkl, features.json from ml/artifacts/ at startup.
+The /chat endpoint delegates to services/llm_service.py which calls the
+NVIDIA NIM LLM API. All API credentials are sourced from environment variables.
 """
 
 import json
@@ -14,6 +17,37 @@ import sys
 from pathlib import Path
 from typing import Any
 
+# ---------------------------------------------------------------------------
+# Path setup — MUST happen before any local package imports.
+#
+# Uvicorn is launched from the project root as `python3 -m uvicorn backend.app:app`
+# so Python's default sys.path does NOT include the `backend/` directory.
+# We add it explicitly here so that:
+#   - `from services.llm_service import ...` resolves backend/services/
+#   - `from preprocess import ...` resolves ml/preprocess.py
+# ---------------------------------------------------------------------------
+BACKEND_DIR  = Path(__file__).resolve().parent           # .../backend/
+BASE_DIR     = BACKEND_DIR.parent                         # .../heart-disease-predictor/
+ML_DIR       = BASE_DIR / "ml"
+ARTIFACTS_DIR = ML_DIR / "artifacts"
+
+sys.path.insert(0, str(BACKEND_DIR))   # makes `services` importable
+sys.path.insert(0, str(ML_DIR))        # makes `preprocess` importable
+
+# ---------------------------------------------------------------------------
+# Load .env — read backend/.env before any os.environ.get() calls.
+# python-dotenv is optional; if not installed, env vars must be set manually.
+# The path is resolved relative to this file so it works regardless of CWD.
+# ---------------------------------------------------------------------------
+try:
+    from dotenv import load_dotenv
+    _env_path = BACKEND_DIR / ".env"
+    if _env_path.exists():
+        load_dotenv(dotenv_path=_env_path)
+        print(f"[Startup] Loaded .env from {_env_path}")
+except ImportError:
+    pass  # python-dotenv not installed — rely on shell-exported env vars
+
 import joblib
 import numpy as np
 import pandas as pd
@@ -21,14 +55,10 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-# ---------------------------------------------------------------------------
-# Path setup — allow importing from ml/
-# ---------------------------------------------------------------------------
-BASE_DIR = Path(__file__).resolve().parent.parent  # heart-disease-predictor/
-ML_DIR = BASE_DIR / "ml"
-ARTIFACTS_DIR = ML_DIR / "artifacts"
-
-sys.path.insert(0, str(ML_DIR))
+# Import the reusable LLM service layer.
+# Keeping LLM logic in a dedicated service keeps this route file thin and
+# makes it easy to swap LLM providers in the future (just update llm_service.py).
+from services.llm_service import get_llm_response
 from preprocess import preprocess_input, get_human_readable_label  # noqa: E402
 
 # ---------------------------------------------------------------------------
@@ -148,6 +178,73 @@ class PredictResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Chat endpoint schemas
+# ---------------------------------------------------------------------------
+
+class PredictionData(BaseModel):
+    """
+    Subset of the prediction output passed back from the frontend.
+    The chatbot uses this as context when constructing the LLM prompt.
+    """
+    risk: str = Field(..., description="'High' or 'Low' risk label")
+    probability: float = Field(..., ge=0.0, le=1.0, description="Risk probability (0-1)")
+    top_factors: list[dict[str, Any]] = Field(
+        default_factory=list,
+        description="Top contributing features returned by /predict",
+    )
+
+
+class ChatRequest(BaseModel):
+    """
+    Payload sent to POST /chat.
+
+    The frontend must echo back the original patient_data and prediction_data
+    from the /predict response so the LLM has full context to answer questions.
+    """
+    question: str = Field(
+        ...,
+        min_length=1,
+        max_length=1000,
+        description="User's natural-language question about their prediction",
+    )
+    patient_data: dict[str, Any] = Field(
+        ...,
+        description="Original 13-feature patient input (mirrors PredictRequest fields)",
+    )
+    prediction_data: PredictionData = Field(
+        ...,
+        description="ML model output from /predict (risk, probability, top_factors)",
+    )
+
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "question": "Why is my risk classified as High?",
+                "patient_data": {
+                    "age": 54, "sex": 1, "cp": 3, "trestbps": 130,
+                    "chol": 290, "fbs": 0, "restecg": 0, "thalach": 120,
+                    "exang": 1, "oldpeak": 2.6, "slope": 2, "ca": 2, "thal": 7,
+                },
+                "prediction_data": {
+                    "risk": "High",
+                    "probability": 0.82,
+                    "top_factors": [
+                        {"feature": "ca", "label": "Major Vessels (fluoroscopy)", "importance": 0.18, "value": 2},
+                        {"feature": "thal", "label": "Thalassemia", "importance": 0.16, "value": 7},
+                        {"feature": "cp", "label": "Chest Pain Type", "importance": 0.14, "value": 3},
+                    ],
+                },
+            }
+        }
+    }
+
+
+class ChatResponse(BaseModel):
+    """Response returned by POST /chat."""
+    answer: str = Field(..., description="LLM-generated educational response")
+
+
+# ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
@@ -256,6 +353,42 @@ def predict(request: PredictRequest):
         top_factors=top_factors,
         explanation=explanation,
     )
+
+
+@app.post("/chat", response_model=ChatResponse)
+async def chat(request: ChatRequest):
+    """
+    Conversational AI endpoint — explains ML predictions via NVIDIA LLM.
+
+    The endpoint is intentionally thin:
+      - Input validation is handled by Pydantic (ChatRequest schema).
+      - All LLM orchestration is delegated to services/llm_service.py.
+      - No model inference happens here; the chatbot only *explains* predictions.
+
+    Required environment variable: NVIDIA_API_KEY
+    """
+    try:
+        # Delegate entirely to the service layer — keeps route logic minimal
+        answer = await get_llm_response(
+            patient_data    = request.patient_data,
+            prediction_data = request.prediction_data.model_dump(),
+            question        = request.question,
+        )
+    except ValueError as exc:
+        # Configuration errors (missing API key, etc.) → 503 so the UI can
+        # show a meaningful "service unavailable" message instead of a raw 500.
+        raise HTTPException(status_code=503, detail=str(exc))
+    except RuntimeError as exc:
+        # Upstream LLM errors (rate-limit, timeout, bad response shape)
+        raise HTTPException(status_code=502, detail=str(exc))
+    except Exception as exc:
+        # Catch-all for unexpected failures — never leak raw tracebacks to clients
+        raise HTTPException(
+            status_code=500,
+            detail=f"Internal error while contacting the AI assistant: {exc}",
+        )
+
+    return ChatResponse(answer=answer)
 
 
 # ---------------------------------------------------------------------------

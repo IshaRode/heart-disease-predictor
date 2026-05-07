@@ -3,12 +3,16 @@
 import { useState, useCallback } from "react";
 import PredictionForm from "@/components/PredictionForm";
 import ResultCard from "@/components/ResultCard";
+import ChatPanel from "@/components/ChatPanel";
 import { PredictRequest, PredictResponse, PredictionHistoryEntry } from "@/types";
 
 const MAX_HISTORY = 5;
 
 export default function Home() {
   const [result, setResult] = useState<PredictResponse | null>(null);
+  // Keep the submitted patient data in state so it can be forwarded to the
+  // ChatPanel — the chatbot needs the original form input as LLM context.
+  const [patientData, setPatientData] = useState<PredictRequest | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [history, setHistory] = useState<PredictionHistoryEntry[]>([]);
@@ -17,6 +21,7 @@ export default function Home() {
     setIsLoading(true);
     setError(null);
     setResult(null);
+    setPatientData(data); // capture form data for the chatbot context
 
     try {
       const response = await fetch("/api/predict", {
@@ -173,6 +178,16 @@ export default function Home() {
             ))}
           </div>
         </section>
+      )}
+
+      {/* ── AI Health Assistant Chat Panel ── */}
+      {/* Only rendered once a prediction result is available; the chatbot
+          needs both patient_data and prediction_data as LLM context. */}
+      {result && patientData && (
+        <ChatPanel
+          patientData={patientData}
+          predictionData={result}
+        />
       )}
 
       {/* ── Footer ── */}
