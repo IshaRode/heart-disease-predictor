@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { AuthProvider } from "@/context/AuthContext";
 
 export const metadata: Metadata = {
   title: "Heart Disease Risk Predictor | AI-Powered Cardiac Assessment",
@@ -21,7 +22,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        {/* AuthProvider makes the Supabase session available to all client components */}
+        <AuthProvider>{children}</AuthProvider>
+      </body>
     </html>
   );
 }

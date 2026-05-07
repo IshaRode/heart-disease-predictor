@@ -5,10 +5,13 @@ import PredictionForm from "@/components/PredictionForm";
 import ResultCard from "@/components/ResultCard";
 import ChatPanel from "@/components/ChatPanel";
 import { PredictRequest, PredictResponse, PredictionHistoryEntry } from "@/types";
+import { useAuth } from "@/context/AuthContext";
+import AuthGuard from "@/components/auth/AuthGuard";
 
 const MAX_HISTORY = 5;
 
 export default function Home() {
+  const { user, signOut } = useAuth();
   const [result, setResult] = useState<PredictResponse | null>(null);
   // Keep the submitted patient data in state so it can be forwarded to the
   // ChatPanel — the chatbot needs the original form input as LLM context.
@@ -55,7 +58,29 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="app-wrapper">
+    <AuthGuard>
+    <div className="app-wrapper" style={{ position: "relative" }}>
+      {/* ── User Chip (top-right, shown when authenticated) ── */}
+      {user && (
+        <div className="user-chip" id="user-chip">
+          {/* Avatar shows the first letter of the email */}
+          <div className="user-chip__avatar" aria-hidden="true">
+            {user.email?.[0] ?? "U"}
+          </div>
+          <span className="user-chip__email" title={user.email ?? ""}>
+            {user.email}
+          </span>
+          <button
+            className="user-chip__signout"
+            onClick={signOut}
+            id="signout-btn"
+            aria-label="Sign out"
+          >
+            Sign out
+          </button>
+        </div>
+      )}
+
       {/* ── Header ── */}
       <header className="app-header">
         <div className="app-header__eyebrow">
@@ -210,5 +235,6 @@ export default function Home() {
         </p>
       </footer>
     </div>
+    </AuthGuard>
   );
 }

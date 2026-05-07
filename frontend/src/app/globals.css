@@ -1360,3 +1360,442 @@ body::before {
   text-align: right;
   font-family: var(--font-mono);
 }
+
+/* ==========================================================================
+   Authentication System Styles
+   Extends the existing design system — no overrides to existing classes.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   Auth Layout Shell
+   -------------------------------------------------------------------------- */
+.auth-layout {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.auth-main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-xl) var(--space-md);
+}
+
+.auth-footer {
+  text-align: center;
+  padding: var(--space-lg);
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  border-top: 1px solid var(--color-border);
+}
+
+/* --------------------------------------------------------------------------
+   Auth Card  (glassmorphism, matches existing .glass-card style)
+   -------------------------------------------------------------------------- */
+.auth-card {
+  width: 100%;
+  max-width: 440px;
+  background: var(--color-bg-card);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-card), 0 0 60px rgba(79, 156, 249, 0.06);
+  padding: var(--space-2xl);
+  animation: fadeInUp 0.35s ease both;
+}
+
+/* Brand header inside card */
+.auth-card__brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-xl);
+}
+
+.auth-card__brand-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  background: var(--color-accent-glow);
+  border: 1px solid rgba(79, 156, 249, 0.3);
+  flex-shrink: 0;
+}
+
+.auth-card__eyebrow {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+}
+
+.auth-card__heading {
+  margin-bottom: var(--space-xl);
+}
+
+.auth-card__title {
+  font-size: clamp(1.5rem, 4vw, 2rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  background: linear-gradient(135deg, #f0f4f8 0%, #4f9cf9 70%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 1.15;
+  margin-bottom: var(--space-xs);
+}
+
+.auth-card__subtitle {
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+}
+
+/* Body — wraps the form/content area */
+.auth-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+/* --------------------------------------------------------------------------
+   Auth Form — vertical rhythm for fields
+   -------------------------------------------------------------------------- */
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+/* Inline "Forgot password?" link sits to the right of the Password label */
+.form-field label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* --------------------------------------------------------------------------
+   Password visibility toggle wrapper
+   -------------------------------------------------------------------------- */
+.input-password-wrapper {
+  position: relative;
+}
+
+.input-password-wrapper .form-input {
+  padding-right: 44px;
+}
+
+.input-eye-btn {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0;
+  color: var(--color-text-muted);
+  transition: color var(--transition-fast);
+}
+
+.input-eye-btn:hover {
+  color: var(--color-text-secondary);
+}
+
+/* --------------------------------------------------------------------------
+   Field OK state
+   -------------------------------------------------------------------------- */
+.field-ok {
+  font-size: 0.72rem;
+  color: var(--color-low-risk);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* --------------------------------------------------------------------------
+   Auth Divider ("or continue with email")
+   -------------------------------------------------------------------------- */
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin: var(--space-xs) 0;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--color-border);
+}
+
+/* --------------------------------------------------------------------------
+   Google Button
+   -------------------------------------------------------------------------- */
+.google-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  padding: 12px 20px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: var(--radius-md);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  position: relative;
+  overflow: hidden;
+}
+
+.google-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.08), transparent);
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.google-btn:hover:not(:disabled)::before {
+  opacity: 1;
+}
+
+.google-btn:hover:not(:disabled) {
+  border-color: rgba(255, 255, 255, 0.24);
+  background: rgba(255, 255, 255, 0.09);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+}
+
+.google-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.google-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.google-btn__icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+/* --------------------------------------------------------------------------
+   Alert Banners (error / info)
+   -------------------------------------------------------------------------- */
+.auth-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  padding: 12px var(--space-md);
+  border-radius: var(--radius-md);
+  font-size: 0.85rem;
+  line-height: 1.5;
+  animation: fadeInUp 0.2s ease both;
+}
+
+.auth-alert--error {
+  background: var(--color-high-risk-bg);
+  border: 1px solid rgba(255, 77, 109, 0.3);
+  color: #ff8fa3;
+}
+
+.auth-alert--info {
+  background: rgba(79, 156, 249, 0.08);
+  border: 1px solid rgba(79, 156, 249, 0.25);
+  color: var(--color-accent);
+}
+
+/* --------------------------------------------------------------------------
+   Auth Links
+   -------------------------------------------------------------------------- */
+.auth-link {
+  color: var(--color-accent);
+  text-decoration: none;
+  font-weight: 500;
+  transition: color var(--transition-fast);
+}
+
+.auth-link:hover {
+  color: #7ab3f9;
+  text-decoration: underline;
+}
+
+.auth-link--inline {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--color-text-muted);
+  margin-left: auto;
+}
+
+.auth-link--inline:hover {
+  color: var(--color-accent);
+  text-decoration: none;
+}
+
+/* Footer text ("Don't have an account?") */
+.auth-footer-text {
+  text-align: center;
+  font-size: 0.83rem;
+  color: var(--color-text-muted);
+  margin-top: var(--space-sm);
+}
+
+/* --------------------------------------------------------------------------
+   Password Strength Meter
+   -------------------------------------------------------------------------- */
+.pwd-strength {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-top: 6px;
+}
+
+.pwd-strength__bars {
+  display: flex;
+  gap: 4px;
+  flex: 1;
+}
+
+.pwd-strength__bar {
+  height: 4px;
+  flex: 1;
+  border-radius: var(--radius-full);
+}
+
+.pwd-strength__label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  min-width: 44px;
+  text-align: right;
+}
+
+/* --------------------------------------------------------------------------
+   Success State (sign-up / forgot-password / reset-password)
+   -------------------------------------------------------------------------- */
+.auth-success-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--space-md);
+  padding: var(--space-md) 0;
+}
+
+.auth-success-icon {
+  font-size: 2.5rem;
+  animation: popIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes popIn {
+  from { transform: scale(0.5); opacity: 0; }
+  to   { transform: scale(1);   opacity: 1; }
+}
+
+.auth-success-text {
+  font-size: 0.95rem;
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+}
+
+.auth-success-subtext {
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+}
+
+/* --------------------------------------------------------------------------
+   User Chip (shown in the main app header when authenticated)
+   -------------------------------------------------------------------------- */
+.user-chip {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  padding: 6px 14px 6px 6px;
+  position: absolute;
+  top: var(--space-lg);
+  right: var(--space-xl);
+  animation: fadeInUp 0.3s ease both;
+}
+
+.user-chip__avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #4f9cf9, #2d7dd2);
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  text-transform: uppercase;
+}
+
+.user-chip__email {
+  font-size: 0.78rem;
+  color: var(--color-text-secondary);
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-chip__signout {
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  font-size: 0.72rem;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.user-chip__signout:hover {
+  color: var(--color-high-risk);
+  border-color: rgba(255, 77, 109, 0.3);
+  background: var(--color-high-risk-bg);
+}
+
+@media (max-width: 600px) {
+  .user-chip {
+    position: static;
+    margin: 0 auto var(--space-md);
+    width: fit-content;
+  }
+
+  .user-chip__email {
+    display: none;
+  }
+}
