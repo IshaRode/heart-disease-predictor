@@ -25,7 +25,12 @@ build/
 .venv/
 venv/
 env/
-*.pkl           # trained model artifacts (regenerate via train.py)
+# trained model artifacts — commit the ones in ml/artifacts/ so Render can use them
+!ml/artifacts/*.pkl
+!ml/artifacts/*.joblib
+!ml/artifacts/*.json
+# but ignore any stray .pkl files elsewhere
+*.pkl
 *.joblib
 
 # ---------------------------------------------------------------------------
