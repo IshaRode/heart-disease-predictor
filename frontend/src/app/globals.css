@@ -777,21 +777,82 @@ body::before {
 }
 
 /* --------------------------------------------------------------------------
-   Result Panel scroll
+   Result Panel — same height as the form, body scrolls internally
    -------------------------------------------------------------------------- */
 .result-panel {
+  /* Stretch to match the form column height via CSS grid alignment */
+  align-self: stretch;
   display: flex;
   flex-direction: column;
-  position: sticky;
-  top: var(--space-xl);
-  max-height: calc(100vh - var(--space-2xl));
+}
+
+/* Card fills the column entirely */
+.result-panel .glass-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* Header pinned at the top */
+.result-panel .glass-card__header {
+  flex-shrink: 0;
+}
+
+/* Body takes remaining height and scrolls */
+.result-panel .glass-card__body {
+  flex: 1 1 0;
+  min-height: 0;
   overflow-y: auto;
+  overflow-x: hidden;
+  /* Fade at the bottom to signal more content */
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    black 0%,
+    black calc(100% - 48px),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    black 0%,
+    black calc(100% - 48px),
+    transparent 100%
+  );
+  padding-bottom: calc(var(--space-xl) + 40px);
+}
+
+/* Thin styled scrollbar */
+.result-panel .glass-card__body::-webkit-scrollbar {
+  width: 5px;
+}
+.result-panel .glass-card__body::-webkit-scrollbar-track {
+  background: transparent;
+}
+.result-panel .glass-card__body::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-full);
+}
+.result-panel .glass-card__body::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.24);
+}
+/* Firefox */
+.result-panel .glass-card__body {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
 }
 
 @media (max-width: 900px) {
   .result-panel {
-    position: static;
-    max-height: none;
+    align-self: auto;
+    height: auto;
+  }
+  .result-panel .glass-card {
+    height: auto;
+  }
+  .result-panel .glass-card__body {
+    overflow-y: visible;
+    -webkit-mask-image: none;
+    mask-image: none;
+    padding-bottom: var(--space-xl);
   }
   .form-grid {
     grid-template-columns: 1fr;
@@ -1799,3 +1860,440 @@ body::before {
     display: none;
   }
 }
+
+/* --------------------------------------------------------------------------
+   User chip — History link button
+   -------------------------------------------------------------------------- */
+.user-chip__history-link {
+  font-size: 0.72rem;
+  font-family: var(--font-sans);
+  color: var(--color-accent);
+  text-decoration: none;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(79, 156, 249, 0.3);
+  background: rgba(79, 156, 249, 0.07);
+  white-space: nowrap;
+  transition: all var(--transition-fast);
+}
+
+.user-chip__history-link:hover {
+  background: rgba(79, 156, 249, 0.15);
+  border-color: rgba(79, 156, 249, 0.5);
+}
+
+/* --------------------------------------------------------------------------
+   History strip — view-all link + per-card delete button
+   -------------------------------------------------------------------------- */
+.history-view-all-link {
+  font-size: 0.75rem;
+  color: var(--color-accent);
+  text-decoration: none;
+  font-weight: 600;
+  transition: opacity var(--transition-fast);
+}
+.history-view-all-link:hover { opacity: 0.75; }
+
+.history-card__delete-btn {
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 4px;
+  border-radius: var(--radius-sm);
+  transition: color var(--transition-fast), background var(--transition-fast);
+}
+.history-card__delete-btn:hover {
+  color: var(--color-high-risk);
+  background: var(--color-high-risk-bg);
+}
+
+/* --------------------------------------------------------------------------
+   History Page — Layout
+   -------------------------------------------------------------------------- */
+.hist-page {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 var(--space-xl);
+}
+
+.hist-nav {
+  padding: var(--space-lg) 0 0;
+}
+
+.hist-back-link {
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  transition: color var(--transition-fast);
+}
+.hist-back-link:hover { color: var(--color-accent); }
+
+.hist-page__header {
+  text-align: center;
+  padding: var(--space-2xl) 0 var(--space-xl);
+}
+
+/* --------------------------------------------------------------------------
+   History Page — Stats Strip
+   -------------------------------------------------------------------------- */
+.hist-stats-strip {
+  display: flex;
+  gap: var(--space-md);
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: var(--space-2xl);
+}
+
+.hist-stat-card {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-md) var(--space-xl);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 110px;
+  transition: border-color var(--transition-fast);
+}
+.hist-stat-card:hover { border-color: rgba(255,255,255,0.15); }
+
+.hist-stat-card__value {
+  font-size: 1.8rem;
+  font-weight: 800;
+  font-family: var(--font-mono);
+  color: var(--color-text-primary);
+  line-height: 1;
+}
+.hist-stat-card__label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* --------------------------------------------------------------------------
+   History Page — Table
+   -------------------------------------------------------------------------- */
+.hist-main {
+  padding-bottom: var(--space-3xl);
+}
+
+.hist-table-header {
+  display: grid;
+  grid-template-columns: 180px 110px 1fr 1fr 130px 180px;
+  gap: var(--space-md);
+  padding: 0 var(--space-md) var(--space-sm);
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--color-text-muted);
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: var(--space-sm);
+}
+
+.hist-table-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+/* --------------------------------------------------------------------------
+   History Page — Row
+   -------------------------------------------------------------------------- */
+.hist-row {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  animation: fadeInUp 0.25s ease both;
+}
+.hist-row:hover {
+  border-color: rgba(255,255,255,0.13);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+}
+
+.hist-row__summary {
+  display: grid;
+  grid-template-columns: 180px 110px 1fr 1fr 130px 180px;
+  gap: var(--space-md);
+  align-items: center;
+  padding: var(--space-md);
+}
+
+.hist-row__date {
+  font-size: 0.78rem;
+  font-family: var(--font-mono);
+  color: var(--color-text-secondary);
+}
+
+.hist-row__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.hist-row__badge--high {
+  color: var(--color-high-risk);
+  background: var(--color-high-risk-bg);
+  border: 1px solid rgba(255,77,109,0.25);
+}
+.hist-row__badge--low {
+  color: var(--color-low-risk);
+  background: var(--color-low-risk-bg);
+  border: 1px solid rgba(44,182,125,0.25);
+}
+.hist-row__badge-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: pulse-dot 1.5s ease-in-out infinite;
+}
+
+.hist-row__prob-col {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.hist-row__prob-val {
+  font-size: 1rem;
+  font-weight: 800;
+  font-family: var(--font-mono);
+}
+
+.hist-prob-bar-track {
+  height: 5px;
+  background: rgba(255,255,255,0.07);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+.hist-prob-bar-fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  transition: width 0.6s cubic-bezier(0.4,0,0.2,1);
+}
+.hist-prob-bar-fill--high {
+  background: linear-gradient(90deg, #ff4d6d, #ff8fa3);
+}
+.hist-prob-bar-fill--low {
+  background: linear-gradient(90deg, #2cb67d, #7eebbe);
+}
+
+.hist-row__top-factor {
+  font-size: 0.82rem;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hist-row__demog {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.hist-row__controls {
+  display: flex;
+  gap: var(--space-sm);
+  justify-content: flex-end;
+}
+
+.hist-btn {
+  padding: 5px 12px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  border: 1px solid var(--color-border);
+  background: none;
+}
+.hist-btn--expand {
+  color: var(--color-accent);
+  border-color: rgba(79,156,249,0.3);
+}
+.hist-btn--expand:hover {
+  background: rgba(79,156,249,0.1);
+  border-color: rgba(79,156,249,0.5);
+}
+.hist-btn--delete {
+  color: var(--color-text-muted);
+}
+.hist-btn--delete:hover {
+  color: var(--color-high-risk);
+  border-color: rgba(255,77,109,0.3);
+  background: var(--color-high-risk-bg);
+}
+
+/* --------------------------------------------------------------------------
+   History Page — Expanded Detail Panel
+   -------------------------------------------------------------------------- */
+.hist-row__detail {
+  border-top: 1px solid var(--color-border);
+  padding: var(--space-lg) var(--space-xl);
+  background: rgba(255,255,255,0.02);
+  animation: fadeInUp 0.2s ease both;
+}
+
+.hist-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-xl);
+}
+
+.hist-detail-section__title {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-md);
+}
+
+/* Inputs list */
+.hist-inputs-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-sm) var(--space-md);
+}
+.hist-input-pair {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.hist-input-pair__label {
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+.hist-input-pair__value {
+  font-size: 0.85rem;
+  font-family: var(--font-mono);
+  color: var(--color-text-primary);
+}
+
+/* Factors list */
+.hist-factors-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  list-style: none;
+  padding: 0;
+  margin-bottom: var(--space-md);
+}
+.hist-factor-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: 8px 12px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+.hist-factor-rank {
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  background: var(--color-accent-glow);
+  border: 1px solid rgba(79,156,249,0.3);
+  color: var(--color-accent);
+  font-size: 0.7rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.hist-factor-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.hist-factor-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+.hist-factor-meta {
+  font-size: 0.72rem;
+  font-family: var(--font-mono);
+  color: var(--color-text-muted);
+}
+
+.hist-explanation {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  font-size: 0.82rem;
+  color: var(--color-text-secondary);
+  line-height: 1.7;
+  font-style: italic;
+}
+
+/* --------------------------------------------------------------------------
+   History Page — Empty state
+   -------------------------------------------------------------------------- */
+.hist-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  gap: var(--space-lg);
+  color: var(--color-text-muted);
+  text-align: center;
+}
+.hist-empty-state__text {
+  font-size: 0.95rem;
+  line-height: 1.8;
+  max-width: 320px;
+}
+
+/* --------------------------------------------------------------------------
+   History Page — Responsive
+   -------------------------------------------------------------------------- */
+@media (max-width: 1024px) {
+  .hist-table-header,
+  .hist-row__summary {
+    grid-template-columns: 1fr 100px 120px 1fr 120px;
+  }
+  /* hide demographics column on medium screens */
+  .hist-row__demog,
+  .hist-table-header span:nth-child(5) { display: none; }
+}
+
+@media (max-width: 768px) {
+  .hist-page { padding: 0 var(--space-md); }
+
+  .hist-table-header { display: none; }
+
+  .hist-row__summary {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto auto auto;
+    gap: var(--space-sm);
+  }
+  .hist-row__date    { grid-column: 1 / -1; }
+  .hist-row__controls { grid-column: 1 / -1; justify-content: flex-start; }
+
+  .hist-detail-grid   { grid-template-columns: 1fr; }
+  .hist-inputs-list   { grid-template-columns: 1fr 1fr; }
+
+  .hist-stats-strip { gap: var(--space-sm); }
+  .hist-stat-card   { padding: var(--space-sm) var(--space-md); min-width: 90px; }
+}
+

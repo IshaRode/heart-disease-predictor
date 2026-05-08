@@ -1,75 +1,78 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import Link from "next/link";
 import PredictionForm from "@/components/PredictionForm";
 import ResultCard from "@/components/ResultCard";
 import ChatPanel from "@/components/ChatPanel";
-import { PredictRequest, PredictResponse, PredictionHistoryEntry } from "@/types";
+import { PredictRequest, PredictResponse } from "@/types";
 import { useAuth } from "@/context/AuthContext";
 import AuthGuard from "@/components/auth/AuthGuard";
-
-const MAX_HISTORY = 5;
+import { createClient } from "@/lib/supabase/client";
+import { savePrediction } from "@/lib/supabase/predictions";
 
 export default function Home() {
   const { user, signOut } = useAuth();
+  const supabase = createClient();
+
   const [result, setResult] = useState<PredictResponse | null>(null);
-  // Keep the submitted patient data in state so it can be forwarded to the
-  // ChatPanel — the chatbot needs the original form input as LLM context.
   const [patientData, setPatientData] = useState<PredictRequest | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [history, setHistory] = useState<PredictionHistoryEntry[]>([]);
 
-  const handleSubmit = useCallback(async (data: PredictRequest) => {
-    setIsLoading(true);
-    setError(null);
-    setResult(null);
-    setPatientData(data); // capture form data for the chatbot context
+  // ── Submit handler ──────────────────────────────────────────────────────
+  const handleSubmit = useCallback(
+    async (data: PredictRequest) => {
+      setIsLoading(true);
+      setError(null);
+      setResult(null);
+      setPatientData(data);
 
-    try {
-      const response = await fetch("/api/predict", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
+      try {
+        const response = await fetch("/api/predict", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        });
 
-      if (!response.ok) {
-        const err = await response.json().catch(() => ({ error: response.statusText }));
-        throw new Error(err.error ?? "Prediction failed");
+        if (!response.ok) {
+          const err = await response.json().catch(() => ({ error: response.statusText }));
+          throw new Error(err.error ?? "Prediction failed");
+        }
+
+        const prediction: PredictResponse = await response.json();
+        setResult(prediction);
+
+        // ── Persist to Supabase ────────────────────────────────────────
+        if (user) {
+          await savePrediction(supabase, user.id, data, prediction);
+        }
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : "An unexpected error occurred.";
+        setError(message);
+      } finally {
+        setIsLoading(false);
       }
-
-      const prediction: PredictResponse = await response.json();
-      setResult(prediction);
-
-      // Add to history (most recent first, cap at MAX_HISTORY)
-      const entry: PredictionHistoryEntry = {
-        id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-        timestamp: new Date().toLocaleTimeString(),
-        input: data,
-        result: prediction,
-      };
-      setHistory((prev) => [entry, ...prev].slice(0, MAX_HISTORY));
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "An unexpected error occurred.";
-      setError(message);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [user]
+  );
 
   return (
     <AuthGuard>
     <div className="app-wrapper" style={{ position: "relative" }}>
-      {/* ── User Chip (top-right, shown when authenticated) ── */}
+      {/* ── User Chip (top-right) ── */}
       {user && (
         <div className="user-chip" id="user-chip">
-          {/* Avatar shows the first letter of the email */}
           <div className="user-chip__avatar" aria-hidden="true">
-            {user.email?.[0] ?? "U"}
+            {user.email?.[0]?.toUpperCase() ?? "U"}
           </div>
           <span className="user-chip__email" title={user.email ?? ""}>
             {user.email}
           </span>
+          <Link href="/history" className="user-chip__history-link" id="view-history-btn">
+            📋 History
+          </Link>
           <button
             className="user-chip__signout"
             onClick={signOut}
@@ -116,7 +119,7 @@ export default function Home() {
 
         {/* Right: Results */}
         <aside aria-labelledby="result-heading" className="result-panel">
-          <div className="glass-card" style={{ height: "fit-content" }}>
+          <div className="glass-card">
             <div className="glass-card__header">
               <div className="glass-card__icon" aria-hidden="true">
                 {result ? (result.risk === "High" ? "🚨" : "✅") : "📊"}
@@ -126,9 +129,7 @@ export default function Home() {
                   Prediction Results
                 </h2>
                 <p className="glass-card__subtitle">
-                  {result
-                    ? `Random Forest · Recall 96.4%`
-                    : "Awaiting input"}
+                  {result ? `Random Forest · Recall 96.4%` : "Awaiting input"}
                 </p>
               </div>
             </div>
@@ -139,80 +140,10 @@ export default function Home() {
         </aside>
       </main>
 
-      {/* ── Prediction History ── */}
-      {history.length > 0 && (
-        <section className="history-section" aria-labelledby="history-heading">
-          <div className="history-header">
-            <h3 className="history-title" id="history-heading">
-              Recent Predictions
-            </h3>
-            <button
-              className="history-clear-btn"
-              onClick={() => setHistory([])}
-              aria-label="Clear prediction history"
-              id="clear-history-btn"
-            >
-              Clear history
-            </button>
-          </div>
-
-          <div className="history-grid" role="list">
-            {history.map((entry) => (
-              <article
-                key={entry.id}
-                className="history-card"
-                role="listitem"
-                aria-label={`Prediction at ${entry.timestamp}: ${entry.result.risk} risk`}
-              >
-                <span className="history-card__timestamp">{entry.timestamp}</span>
-
-                <div
-                  className={`history-card__risk history-card__risk--${
-                    entry.result.risk === "High" ? "high" : "low"
-                  }`}
-                >
-                  <span aria-hidden="true">
-                    {entry.result.risk === "High" ? "🚨" : "✅"}
-                  </span>
-                  {entry.result.risk} Risk
-                </div>
-
-                <div
-                  className="history-card__prob"
-                  style={{
-                    color:
-                      entry.result.risk === "High"
-                        ? "var(--color-high-risk)"
-                        : "var(--color-low-risk)",
-                  }}
-                >
-                  {(entry.result.probability * 100).toFixed(1)}%
-                </div>
-
-                <p className="history-card__factors">
-                  Key: {entry.result.top_factors
-                    .slice(0, 3)
-                    .map((f) => f.label)
-                    .join(", ")}
-                </p>
-
-                <p className="history-card__factors">
-                  Age {entry.input.age} · {entry.input.sex === 1 ? "Male" : "Female"}
-                </p>
-              </article>
-            ))}
-          </div>
-        </section>
-      )}
 
       {/* ── AI Health Assistant Chat Panel ── */}
-      {/* Only rendered once a prediction result is available; the chatbot
-          needs both patient_data and prediction_data as LLM context. */}
       {result && patientData && (
-        <ChatPanel
-          patientData={patientData}
-          predictionData={result}
-        />
+        <ChatPanel patientData={patientData} predictionData={result} />
       )}
 
       {/* ── Footer ── */}
