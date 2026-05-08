@@ -15,7 +15,16 @@ import { NextResponse, type NextRequest } from "next/server";
 export const runtime = "nodejs";
 
 export async function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+  const { pathname, searchParams } = request.nextUrl;
+
+  // ── Safety net: if Supabase falls back to sending the OAuth code to the
+  // root URL (/?code=...) instead of /auth/callback, forward it correctly.
+  const code = searchParams.get("code");
+  if (code && pathname !== "/auth/callback") {
+    const callbackUrl = request.nextUrl.clone();
+    callbackUrl.pathname = "/auth/callback";
+    return NextResponse.redirect(callbackUrl);
+  }
 
   // Skip middleware for auth routes except the ones we explicitly want to guard
   const isAuthRoute = pathname.startsWith("/auth");
