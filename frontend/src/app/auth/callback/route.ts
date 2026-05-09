@@ -12,7 +12,12 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
 export async function GET(request: Request) {
-  const { searchParams, origin } = new URL(request.url);
+  const requestUrl = new URL(request.url);
+  const forwardedHost = request.headers.get("x-forwarded-host");
+  const forwardedProto = request.headers.get("x-forwarded-proto") || "http";
+  const origin = forwardedHost ? `${forwardedProto}://${forwardedHost}` : requestUrl.origin;
+  
+  const searchParams = requestUrl.searchParams;
   const code = searchParams.get("code");
   // `next` can be used to redirect somewhere specific after login
   const next = searchParams.get("next") ?? "/";
